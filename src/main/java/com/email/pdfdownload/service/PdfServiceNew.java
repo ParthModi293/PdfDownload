@@ -53,8 +53,8 @@ public class PdfServiceNew {
 
             for (RequestDto requestDto : requestDtos) {
 
-                // Create a 2-column table for the client name and ledger balance
-                float[] boxWidths = {4f,2f,2f,2f,2f,2f,2f,2f,3f};
+                // Create a 9-column table for the client name and ledger balance
+                float[] boxWidths = {5f,2f,2f,2f,2f,3f,2f,2f,3f};
                 Table boxTable = new Table(boxWidths);
                 boxTable.setWidth(UnitValue.createPercentValue(100));
                 boxTable.setMargin(0).setPadding(0);
@@ -86,7 +86,7 @@ public class PdfServiceNew {
                     boxTable.addCell(createDataCell(script.getBuyAvg()));
                     boxTable.addCell(createDataCell(script.getSellQty()));
                     boxTable.addCell(createDataCell(script.getSellAvg()));
-                    boxTable.addCell(createDataCell(script.getBeAvg()));
+
 
 
 
@@ -106,7 +106,7 @@ public class PdfServiceNew {
                     } catch (NumberFormatException e) {
                         boxTable.addCell(createDataCell(posQtyValue));
                     }
-
+                    boxTable.addCell(createDataCell(script.getBeAvg()));
                     boxTable.addCell(createDataCell(script.getLtp()));
 
 
