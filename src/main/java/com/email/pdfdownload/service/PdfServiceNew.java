@@ -1,4 +1,3 @@
-/*
 package com.email.pdfdownload.service;
 
 
@@ -12,7 +11,6 @@ import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TabAlignment;
@@ -27,104 +25,118 @@ import java.io.IOException;
 import java.util.List;
 
 @Service
-public class PdfService {
+public class PdfServiceNew {
 
     public byte[] generateTablePdf(List<RequestDto> requestDtos) {
+
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+
             PdfWriter writer = new PdfWriter(byteArrayOutputStream);
             PdfDocument pdfDoc = new PdfDocument(writer);
 
-            PageSize customPageSize = new PageSize(PageSize.A4.getWidth()+200, PageSize.A4.getHeight()); // Increase height by 200 points
+            PageSize customPageSize = new PageSize(PageSize.A4.getWidth(), PageSize.A4.getHeight()); // Increase height by 200 points
             Document document = new Document(pdfDoc, customPageSize.rotate());
             document.setMargins(50, 15, 50, 15);
 
-            for (RequestDto requestDto : requestDtos) {
-                String leftHeaderText = "Customer RMS: ";  // Left Corner
+            String leftHeaderText = "Customer RMS: ";  // Left Corner
+            String rightHeaderText = "From: " + requestDtos.get(0).getFromDate() + " To: " + requestDtos.get(0).getToDate();  // Right Corner
+
+            pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, new HeaderFooterPageEvent(leftHeaderText, rightHeaderText));
+
+ /* String leftHeaderText = "Customer RMS: ";  // Left Corner
                 String rightHeaderText = "From: " + requestDto.getFromDate() + " To: " + requestDto.getToDate();  // Right Corner
 
                 // Attach header/footer handler
                 pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, new HeaderFooterPageEvent(leftHeaderText, rightHeaderText));
 
+*/
+
+            for (RequestDto requestDto : requestDtos) {
 
                 // Create a 2-column table for the client name and ledger balance
-                float[] boxWidths = {60f, 40f};
+                float[] boxWidths = {4f,2f,2f,2f,2f,2f,2f,2f,3f};
                 Table boxTable = new Table(boxWidths);
                 boxTable.setWidth(UnitValue.createPercentValue(100));
                 boxTable.setMargin(0).setPadding(0);
                 boxTable.setFixedLayout();
 
+                double totalBuyQty = 0.0;
+                double totalM2M = 0.0;
 
                 // Add client name and ledger balance in separate boxes
                 boxTable.addCell(createTopLeftBoxCell(requestDto.getClientName()));
                 boxTable.addCell(createBoxTextSeperate("Ledger Balance:", requestDto.getLedgerBalance()));
 
-                // Add the box table to the document
-                document.add(boxTable);
-
-                // Create a table for script details (8 columns)
-                float[] columnWidths = {2f, 2f, 2f, 2f, 2f, 2f, 2f, 2f};
-                Table scriptTable = new Table(columnWidths);
-                scriptTable.setWidth(UnitValue.createPercentValue(100));
 
                 // Add header row
-                scriptTable.addCell(createHeaderCell("Script Name"));
-                scriptTable.addCell(createHeaderCell("Buy Qty"));
-                scriptTable.addCell(createHeaderCell("Buy Avg"));
-                scriptTable.addCell(createHeaderCell("Sell Qty"));
-                scriptTable.addCell(createHeaderCell("Sell Avg"));
-                scriptTable.addCell(createHeaderCell("Pos Qty"));
-                scriptTable.addCell(createHeaderCell("LTP"));
-                scriptTable.addCell(createHeaderCell("M2M"));
+                boxTable.addCell(createHeaderCell1("Script Name"));
+                boxTable.addCell(createHeaderCell("Buy Qty"));
+                boxTable.addCell(createHeaderCell("Buy Avg"));
+                boxTable.addCell(createHeaderCell("Sell Qty"));
+                boxTable.addCell(createHeaderCell("Sell Avg"));
+                boxTable.addCell(createHeaderCell("Pos Qty"));
+                boxTable.addCell(createHeaderCell("B.E.Avg."));
+                boxTable.addCell(createHeaderCell("LTP"));
+                boxTable.addCell(createHeaderCell("M2M"));
 
                 // Add rows for each script
                 for (AllScript script : requestDto.getScripts()) {
-                    scriptTable.addCell(createDataCell(script.getScriptName()));
-                    scriptTable.addCell(createDataCell(script.getBuyQty()));
-                    scriptTable.addCell(createDataCell(script.getBuyAvg()));
-                    scriptTable.addCell(createDataCell(script.getSellQty()));
-                    scriptTable.addCell(createDataCell(script.getSellAvg()));
+                    boxTable.addCell(createDataCell1(script.getScriptName()));
+                    boxTable.addCell(createDataCell(script.getBuyQty()));
+                    boxTable.addCell(createDataCell(script.getBuyAvg()));
+                    boxTable.addCell(createDataCell(script.getSellQty()));
+                    boxTable.addCell(createDataCell(script.getSellAvg()));
+                    boxTable.addCell(createDataCell(script.getBeAvg()));
+
 
 
                     String posQtyValue = script.getPosQty();
                     try {
                         String cleanedPosQtyValue = posQtyValue.replaceAll("\\(.*\\)", "").trim();
                         if (cleanedPosQtyValue.equals("0")) {
-                            scriptTable.addCell(createDataCell(posQtyValue));
+                            boxTable.addCell(createDataCell(posQtyValue));
                         } else {
                             double posQty = Double.parseDouble(cleanedPosQtyValue);
                             if (posQty < 0) {
-                                scriptTable.addCell(createColoredDataCell(posQtyValue, ColorConstants.RED));
+                                boxTable.addCell(createColoredDataCell(posQtyValue, ColorConstants.RED));
                             } else {
-                                scriptTable.addCell(createColoredDataCell(posQtyValue, ColorConstants.BLUE));
+                                boxTable.addCell(createColoredDataCell(posQtyValue, ColorConstants.BLUE));
                             }
                         }
                     } catch (NumberFormatException e) {
-                        scriptTable.addCell(createDataCell(posQtyValue));
+                        boxTable.addCell(createDataCell(posQtyValue));
                     }
 
-                    scriptTable.addCell(createDataCell(script.getLtp()));
+                    boxTable.addCell(createDataCell(script.getLtp()));
 
 
                     String m2mValue = script.getM2m();
                     try {
                         double m2m = Double.parseDouble(m2mValue);
                         if (m2m < 0) {
-                            scriptTable.addCell(createColoredDataCell(m2mValue, ColorConstants.RED));
+                            boxTable.addCell(createColoredDataCell(m2mValue, ColorConstants.RED));
                         } else {
-                            scriptTable.addCell(createColoredDataCell(m2mValue, ColorConstants.BLUE));
+                            boxTable.addCell(createColoredDataCell(m2mValue, ColorConstants.BLUE));
                         }
                     } catch (NumberFormatException e) {
-                        scriptTable.addCell(createDataCell(m2mValue));
+                        boxTable.addCell(createDataCell(m2mValue));
                     }
+
+                    double buyQty = Double.parseDouble(script.getBuyQty());
+                    totalBuyQty += buyQty;
+                    double m2mVal = Double.parseDouble(script.getM2m());
+                    totalM2M +=m2mVal;
 
                 }
 
-                document.add(scriptTable);
+
 
                 // Add the second set of boxes immediately below the table
-                Table bottomBoxTable = createEmptyBoxTable();
 
-                document.add(bottomBoxTable);
+                boxTable.addCell(createBottomLeftBoxCell(String.valueOf(totalBuyQty)));
+                boxTable.addCell(createBottomRightBoxCell(String.valueOf(totalM2M)));
+
+                document.add(boxTable);
 
                 // Add spacing only between different request DTOs
                 if (requestDto != requestDtos.get(requestDtos.size() - 1)) {
@@ -138,52 +150,41 @@ public class PdfService {
         }
     }
 
-    private Table createEmptyBoxTable() {
-        float[] boxWidths = {60f, 40f};
-        Table boxTable = new Table(boxWidths);
-        boxTable.setWidth(UnitValue.createPercentValue(100));
-        boxTable.setMargin(0).setPadding(0);
-        boxTable.setFixedLayout();
-        // Add two empty boxes
-        boxTable.addCell(createBottomLeftBoxCell("Hello")); // Empty Box 1
-        boxTable.addCell(createBottomRightBoxCell("Hello")); // Empty Box 2
-
-        return boxTable;
-    }
-    private Cell createBottomLeftBoxCell(String content) {
+    public Cell createBottomLeftBoxCell(String content) {
         Color customColor = new DeviceRgb(255, 255, 153);
 
-        return new Cell()
+        return new Cell(1,5)
                 .add(new Paragraph(content).setBold())
-                .setTextAlignment(TextAlignment.CENTER)
                 .setPadding(5)
                 .setMargin(0)
                 .setBackgroundColor(customColor)
                 .setBorder(new SolidBorder(ColorConstants.BLACK,1))
                 .setKeepTogether(true)
                 .setWidth(UnitValue.createPercentValue(100))  // Ensure it fills the cell space
-                .setTextAlignment(TextAlignment.LEFT)
+                .setTextAlignment(TextAlignment.CENTER)
                 .setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
-    private Cell createBottomRightBoxCell(String content) {
-        return new Cell()
+    public Cell createBottomRightBoxCell(String content) {
+        Color customColor = new DeviceRgb(99,99,99);
+        return new Cell(1,4)
                 .add(new Paragraph(content).setBold())
                 .setTextAlignment(TextAlignment.RIGHT)
                 .setPadding(5)
                 .setMargin(0)
-                .setBackgroundColor(ColorConstants.LIGHT_GRAY)
+                .setFontColor(ColorConstants.WHITE)
+                .setBackgroundColor(customColor)
                 .setBorder(new SolidBorder(ColorConstants.BLACK,1))
                 .setKeepTogether(true)
                 .setWidth(UnitValue.createPercentValue(100))  // Ensure it fills the cell space
-                .setTextAlignment(TextAlignment.LEFT)
+                .setTextAlignment(TextAlignment.RIGHT)
                 .setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
-    private Cell createTopLeftBoxCell(String content) {
-        Color customColor = new DeviceRgb(102, 178, 255);
+    public Cell createTopLeftBoxCell(String content) {
+        Color customColor = new DeviceRgb(203, 195  , 227);
 
-        return new Cell()
+        return new Cell(1,5)
                 .add(new Paragraph(content).setBold())
                 .setTextAlignment(TextAlignment.LEFT)
                 .setPadding(5)
@@ -197,15 +198,15 @@ public class PdfService {
     }
 
 
-    private Cell createBoxTextSeperate(String label, String value) {
-        Color customColor = new DeviceRgb(102, 178, 255);
+    public Cell createBoxTextSeperate(String label, String value) {
+        Color customColor = new DeviceRgb(203, 195  , 227);
         Paragraph paragraph = new Paragraph()
                 .add(label)  // Add the label text
                 .add(new Tab())  // Add a tab space to push the value to the right
                 .add(value)  // Add the value
                 .addTabStops(new TabStop(1000, TabAlignment.RIGHT));  // Ensure right alignment
 
-        return new Cell()
+        return new Cell(1,4)
                 .add(paragraph.setBold())
                 .setTextAlignment(TextAlignment.LEFT)
                 .setPadding(5)
@@ -217,21 +218,35 @@ public class PdfService {
                 .setVerticalAlignment(VerticalAlignment.MIDDLE);
     }
 
-    private Cell createHeaderCell(String content) {
+    public Cell createHeaderCell(String content) {
+        Color customColor = new DeviceRgb(99,99,99);
         return new Cell().add(new Paragraph(content).setBold())
-                .setBackgroundColor(ColorConstants.LIGHT_GRAY)
-                .setTextAlignment(TextAlignment.CENTER);
+                .setBackgroundColor(customColor)
+                .setTextAlignment(TextAlignment.RIGHT)
+                .setFontColor(ColorConstants.WHITE);
+    }
+    public Cell createHeaderCell1(String content) {
+        Color customColor = new DeviceRgb(99,99,99);
+        return new Cell().add(new Paragraph(content).setBold())
+                .setBackgroundColor(customColor)
+                .setTextAlignment(TextAlignment.LEFT)
+                .setFontColor(ColorConstants.WHITE);
     }
 
-    private Cell createDataCell(String content) {
+    public Cell createDataCell(String content) {
         return new Cell().add(new Paragraph(content))
-                .setTextAlignment(TextAlignment.CENTER);
+                .setTextAlignment(TextAlignment.RIGHT);
     }
 
-    private Cell createColoredDataCell(String content, Color color) {
+    public Cell createDataCell1(String content) {
+        return new Cell().add(new Paragraph(content))
+                .setTextAlignment(TextAlignment.LEFT);
+    }
+
+    public Cell createColoredDataCell(String content, Color color) {
         return new Cell()
                 .add(new Paragraph(content))
-                .setTextAlignment(TextAlignment.CENTER)
+                .setTextAlignment(TextAlignment.RIGHT)
                 .setFontColor(color); // Dynamically set color
     }
 
@@ -241,7 +256,7 @@ public class PdfService {
             fos.write(pdfBytes);
             System.out.println("PDF saved to " + filePath);
         } catch (IOException e) {
-            System.err.println("Error saving PDF: " + e.getMessage());
+            System.out.println("Error saving PDF: " + e.getMessage());
         }
     }
-}*/
+}

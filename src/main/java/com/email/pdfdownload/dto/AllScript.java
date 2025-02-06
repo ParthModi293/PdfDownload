@@ -13,6 +13,17 @@ public class AllScript {
     private String posQty;
     private String ltp;
     private String m2m;
+    private String BeAvg;
+
+    public String getBeAvg() {
+        return BeAvg;
+    }
+
+    public void setBeAvg(String beAvg) {
+        BeAvg = beAvg;
+    }
+
+
 
     public String getScriptName() {
         return scriptName;
