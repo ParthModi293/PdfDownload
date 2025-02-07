@@ -100,41 +100,49 @@ public class HeaderFooterPageEvent implements IEventHandler {
 
     private String leftHeaderText;
     private String rightHeaderText;
+    private boolean addHeader;
+    private boolean addFooter;
+    private boolean headerOnAllPages;
 
 
-    public HeaderFooterPageEvent(String leftHeaderText, String rightHeaderText) {
+    public HeaderFooterPageEvent(String leftHeaderText, String rightHeaderText, boolean addHeader, boolean addFooter, boolean headerOnAllPages) {
         this.leftHeaderText = leftHeaderText;
         this.rightHeaderText = rightHeaderText;
-
+        this.addHeader = addHeader;
+        this.addFooter = addFooter;
+        this.headerOnAllPages = headerOnAllPages;  // Initialize new flag
     }
-
     @Override
     public void handleEvent(Event event) {
         PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
         PdfDocument pdfDoc = docEvent.getDocument();
         PdfPage page = docEvent.getPage();
         PdfCanvas canvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdfDoc);
-
         Rectangle pageSize = page.getPageSize();
 
         try {
             PdfFont font = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
             float fontSize = 12f;
 
-            // Header Left (Top Left Corner)
-            canvas.beginText()
-                    .setFontAndSize(font, fontSize)
-                    .moveText(pageSize.getLeft() + 15, pageSize.getTop() - 30)  // Adjusted to left margin
-                    .showText(leftHeaderText)
-                    .endText();
+// Add Header if addHeader is true AND either headerOnAllPages is true OR it's the first page
 
-            // Header Right (Top Right Corner)
-            float rightHeaderWidth = font.getWidth(rightHeaderText, fontSize);
-            canvas.beginText()
-                    .setFontAndSize(font, fontSize)
-                    .moveText(pageSize.getRight() - rightHeaderWidth - 15, pageSize.getTop() - 30)  // Adjusted to right margin
-                    .showText(rightHeaderText)
-                    .endText();
+            // Header Left (Top Left Corner)
+            if (addHeader && (headerOnAllPages || pdfDoc.getPageNumber(page) == 1)) {
+                // Left Header
+                canvas.beginText()
+                        .setFontAndSize(font, fontSize)
+                        .moveText(pageSize.getLeft() + 15, pageSize.getTop() - 30)
+                        .showText(leftHeaderText)
+                        .endText();
+
+                // Right Header
+                float rightHeaderWidth = font.getWidth(rightHeaderText, fontSize);
+                canvas.beginText()
+                        .setFontAndSize(font, fontSize)
+                        .moveText(pageSize.getRight() - rightHeaderWidth - 15, pageSize.getTop() - 30)
+                        .showText(rightHeaderText)
+                        .endText();
+            }
 
             // Draw a line above the footer
             canvas.setLineWidth(0.5f);
@@ -142,22 +150,33 @@ public class HeaderFooterPageEvent implements IEventHandler {
                     .lineTo(pageSize.getRight() - 15, pageSize.getBottom() + 40)  // Line ends at right margin
                     .stroke();
 
-            // Footer Left: Page Number
-            canvas.beginText()
-                    .setFontAndSize(PdfFontFactory.createFont(StandardFonts.HELVETICA), 10)
-                    .moveText(pageSize.getLeft() + 15, pageSize.getBottom() + 20)  // Adjusted to left margin
-                    .showText("Page " + pdfDoc.getPageNumber(page))
-                    .endText();
+            // Add Footer if addFooter is true
+            if (addFooter) {
+                // Footer Line
+                canvas.setLineWidth(0.5f);
+                canvas.moveTo(pageSize.getLeft() + 15, pageSize.getBottom() + 40)
+                        .lineTo(pageSize.getRight() - 15, pageSize.getBottom() + 40)
+                        .stroke();
 
-            // Footer Right: Printed Time
-            String printedTime = java.time.LocalDateTime.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("EEE, dd/MM/yyyy h.mm a"));
-            float printedTimeWidth = font.getWidth("Print Date: " + printedTime, 10);
-            canvas.beginText()
-                    .setFontAndSize(PdfFontFactory.createFont(StandardFonts.HELVETICA), 10)
-                    .moveText(pageSize.getRight() - printedTimeWidth - 15, pageSize.getBottom() + 20)  // Adjusted to right margin
-                    .showText("Print Date: " + printedTime)
-                    .endText();
+                // Left Footer: Page Number
+                canvas.beginText()
+                        .setFontAndSize(font, fontSize)
+                        .moveText(pageSize.getLeft() + 15, pageSize.getBottom() + 20)
+                        .showText("Page " + pdfDoc.getPageNumber(page))
+                        .endText();
+
+                // Right Footer: Printed Time
+                String printedTime = java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("EEE, dd/MM/yyyy h.mm a"));
+                String rightFooterText = "Print Date: " + printedTime;
+                float printedTimeWidth = font.getWidth(rightFooterText, fontSize);
+
+                canvas.beginText()
+                        .setFontAndSize(font, fontSize)
+                        .moveText(pageSize.getRight() - printedTimeWidth - 15, pageSize.getBottom() + 20)
+                        .showText(rightFooterText)
+                        .endText();
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
